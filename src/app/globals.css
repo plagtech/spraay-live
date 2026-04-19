@@ -1,26 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-primary: #050914;
+  --bg-elevated: #0D1426;
+  --border-subtle: #1A2C4E;
+  --text-primary: #F0F4FA;
+  --text-muted: #8BA3C7;
+  --spraay-blue: #3B9EFF;
+  --spraay-cyan: #4DB8FF;
+  --spraay-deep: #1A2C4E;
+  --success: #4ADE80;
+  --intent: #F87171;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html, body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes pulseBlue {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 158, 255, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(59, 158, 255, 0); }
+}
+
+.event-row {
+  animation: slideIn 0.3s ease-out;
+}
+
+.event-row-payment {
+  animation: slideIn 0.3s ease-out, pulseBlue 2s ease-out;
+}
+
+.live-dot {
+  animation: pulseBlue 2s ease-out infinite;
 }
