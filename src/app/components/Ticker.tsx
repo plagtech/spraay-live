@@ -49,6 +49,15 @@ const CHAIN_LABELS: Record<string, string> = {
   optimism: "Optimism",
 };
 
+type DisplayType = "scan" | "quote" | "attempt" | "settled";
+
+function classifyDisplay(event: GatewayEvent): DisplayType {
+  if (event.event_type === "scan") return "scan";
+  if (event.event_type === "payment") return "settled";
+  if (event.payment_attempted) return "attempt";
+  return "quote";
+}
+
 function timeAgo(timestamp: string): string {
   const diff = Date.now() - new Date(timestamp).getTime();
   const seconds = Math.floor(diff / 1000);
@@ -62,13 +71,14 @@ function timeAgo(timestamp: string): string {
   return `${days}d ago`;
 }
 
-function EventBadge({ type }: { type: GatewayEvent["event_type"] }) {
+function EventBadge({ type }: { type: DisplayType }) {
   const styles = {
     scan: "bg-[var(--spraay-deep)] text-[var(--text-muted)] border-[var(--border-subtle)]",
-    intent: "bg-red-950/40 text-[var(--intent)] border-red-900/40",
-    payment: "bg-[var(--spraay-blue)]/15 text-[var(--spraay-cyan)] border-[var(--spraay-blue)]/30",
+    quote: "bg-sky-950/40 text-sky-300 border-sky-900/40",
+    attempt: "bg-amber-950/40 text-amber-300 border-amber-900/40",
+    settled: "bg-[var(--spraay-blue)]/15 text-[var(--spraay-cyan)] border-[var(--spraay-blue)]/30",
   };
-  const labels = { scan: "SCAN", intent: "INTENT", payment: "PAYMENT" };
+  const labels = { scan: "SCAN", quote: "QUOTE", attempt: "ATTEMPT", settled: "SETTLED" };
   return (
     <span
       className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${styles[type]} tracking-wider`}
@@ -86,7 +96,8 @@ function EventRow({ event }: { event: GatewayEvent }) {
     return () => clearInterval(interval);
   }, []);
 
-  const rowClass = event.event_type === "payment" ? "event-row-payment" : "event-row";
+  const displayType = classifyDisplay(event);
+  const rowClass = displayType === "settled" ? "event-row-payment" : "event-row";
   const categoryLabel = event.category ? CATEGORY_LABELS[event.category] ?? event.category : null;
   const chainLabel = event.chain ? CHAIN_LABELS[event.chain] ?? event.chain : null;
 
@@ -94,7 +105,7 @@ function EventRow({ event }: { event: GatewayEvent }) {
     <div
       className={`${rowClass} flex items-center gap-3 px-4 py-3 border-b border-[var(--border-subtle)]/40 hover:bg-[var(--bg-elevated)]/60 transition-colors`}
     >
-      <EventBadge type={event.event_type} />
+      <EventBadge type={displayType} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">

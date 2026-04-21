@@ -16,10 +16,15 @@ export type GatewayEvent = {
   created_at: string;
   event_type: "scan" | "intent" | "payment";
   path: string;
+  method: string | null;
+  http_status: number | null;
   category: string | null;
   chain: string | null;
   endpoint_name: string | null;
   payer_truncated: string | null;
   batch_size: number | null;
   scanner_source: string | null;
+  user_agent: string | null;
+  payment_attempted: boolean;
+  source_ip_truncated: string | null;
 };

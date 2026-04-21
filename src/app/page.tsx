@@ -12,7 +12,7 @@ export default function Home() {
           </h1>
         </div>
         <p className="text-sm text-[var(--text-muted)] max-w-xl mx-auto">
-  Live x402 gateway activity. Scans, intents, payments — as they happen.
+  Live x402 gateway activity. Scans, quotes, attempts, settlements — as they happen.
 </p>
       </header>
 
