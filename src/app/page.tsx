@@ -1,5 +1,6 @@
 import CounterBar from './components/CounterBar';
 import Ticker from "./components/Ticker";
+import EndpointCount from "./components/EndpointCount";
 
 export default function Home() {
   return (
@@ -14,6 +15,9 @@ export default function Home() {
         <p className="text-sm text-[var(--text-muted)] max-w-xl mx-auto">
   Live x402 gateway activity. Scans, quotes, attempts, settlements — as they happen.
 </p>
+        <div className="mt-3">
+          <EndpointCount />
+        </div>
       </header>
 
       <CounterBar />
