@@ -230,7 +230,7 @@ export default function Ticker() {
             waiting for agent activity...
           </div>
         ) : (
-          <div className="max-h-[70vh] overflow-y-auto">
+          <div className="max-h-[70vh] overflow-y-auto ticker-scroll">
             {events.map((event) => (
               <EventRow key={event.id} event={event} />
             ))}

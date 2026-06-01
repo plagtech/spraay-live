@@ -43,3 +43,21 @@ html, body {
 .live-dot {
   animation: pulseBlue 2s ease-out infinite;
 }
+/* Dark scrollbar for the live ticker */
+.ticker-scroll {
+  scrollbar-width: thin;                       /* Firefox */
+  scrollbar-color: var(--border-subtle) transparent;
+}
+.ticker-scroll::-webkit-scrollbar {            /* Chrome / Edge / Safari */
+  width: 8px;
+}
+.ticker-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ticker-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--border-subtle);
+  border-radius: 8px;
+}
+.ticker-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--spraay-blue);
+}
