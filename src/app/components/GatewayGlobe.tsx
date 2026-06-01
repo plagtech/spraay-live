@@ -30,10 +30,6 @@ function classify(e: Pick<GatewayEvent, "event_type" | "payment_attempted">): Ti
 
 export default function GatewayGlobe() {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const cScan = useRef<HTMLSpanElement>(null);
-  const cQuote = useRef<HTMLSpanElement>(null);
-  const cAttempt = useRef<HTMLSpanElement>(null);
-  const cSettled = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -118,21 +114,61 @@ export default function GatewayGlobe() {
       fx.push({ curve, tube, head, ring, age: 0, life: settled ? 3.0 : attempt ? 2.1 : 1.8, settled });
     }
 
-    // live counts (imperative to avoid per-event React re-renders)
-    const counts = { scan: 0, quote: 0, attempt: 0, settled: 0 };
-    const countEls: Record<Tier, React.RefObject<HTMLSpanElement | null>> = { scan: cScan, quote: cQuote, attempt: cAttempt, settled: cSettled };
+    // ---- Live intake: mirror Ticker.tsx exactly — use the realtime INSERT only
+    // as a trigger, then re-fetch the row from the gateway_events_public VIEW
+    // (the proven, RLS-friendly read path). A 3s poll is a safety net so the globe
+    // still animates if the second realtime channel is flaky. Both dedupe via `seen`.
+    type Row = Pick<GatewayEvent, "id" | "event_type" | "payment_attempted" | "chain">;
+    const seen = new Set<string>();
+
+    function ingest(rows: Row[]) {
+      for (const r of rows) {
+        if (!r?.id || seen.has(r.id)) continue;
+        seen.add(r.id);
+        const tier = classify({ event_type: r.event_type ?? "scan", payment_attempted: !!r.payment_attempted });
+        spawnArc(r.chain ?? "base", tier);
+      }
+      if (seen.size > 800) { // keep the set bounded over long sessions
+        let drop = seen.size - 800;
+        for (const id of seen) { if (drop-- <= 0) break; seen.delete(id); }
+      }
+    }
 
     const channel = supabase
       .channel("globe-events")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "gateway_events" }, (payload) => {
-        const row = payload.new as Partial<GatewayEvent>;
-        const tier = classify({ event_type: row.event_type ?? "scan", payment_attempted: !!row.payment_attempted });
-        spawnArc(row.chain ?? "base", tier);
-        counts[tier]++;
-        const el = countEls[tier].current;
-        if (el) el.textContent = counts[tier].toLocaleString();
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "gateway_events" }, async (payload) => {
+        const id = (payload.new as { id?: string }).id;
+        if (!id || seen.has(id)) return;
+        const { data } = await supabase
+          .from("gateway_events_public")
+          .select("id, event_type, payment_attempted, chain")
+          .eq("id", id)
+          .maybeSingle();
+        if (data) ingest([data as Row]);
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== "SUBSCRIBED") console.warn("[globe] realtime status:", status);
+      });
+
+    // Seed recent ids silently (no arc burst on load), then start the poll.
+    let poll: ReturnType<typeof setInterval> | undefined;
+    (async () => {
+      const { data } = await supabase
+        .from("gateway_events_public")
+        .select("id")
+        .order("created_at", { ascending: false })
+        .limit(60);
+      (data as { id: string }[] | null)?.forEach((r) => seen.add(r.id));
+
+      poll = setInterval(async () => {
+        const { data: rows } = await supabase
+          .from("gateway_events_public")
+          .select("id, event_type, payment_attempted, chain")
+          .order("created_at", { ascending: false })
+          .limit(15);
+        if (rows) ingest([...(rows as Row[])].reverse()); // oldest-first so arcs fire in order
+      }, 3000);
+    })();
 
     let raf = 0, last = performance.now();
     const loop = (now: number) => {
@@ -182,6 +218,7 @@ export default function GatewayGlobe() {
 
     return () => {
       cancelAnimationFrame(raf);
+      if (poll) clearInterval(poll);
       ro.disconnect();
       supabase.removeChannel(channel);
       renderer.dispose();
@@ -199,14 +236,6 @@ export default function GatewayGlobe() {
             <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">live</span>
           </div>
           <span className="font-mono text-[11px] text-[var(--text-muted)]">gateway.spraay.app</span>
-        </div>
-        <div className="absolute bottom-3.5 left-0 right-0 flex justify-center gap-6 pointer-events-none">
-          {([["scan", cScan], ["quote", cQuote], ["attempt", cAttempt], ["settled", cSettled]] as const).map(([label, ref]) => (
-            <div key={label} className="text-center">
-              <span ref={ref} className="block text-[17px] font-bold leading-none text-[var(--text-primary)]">0</span>
-              <span className="block mt-0.5 text-[8.5px] uppercase tracking-[0.1em] text-[var(--text-muted)]">{label}s</span>
-            </div>
-          ))}
         </div>
       </div>
     </div>
