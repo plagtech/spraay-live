@@ -1,7 +1,6 @@
 import CounterBar from './components/CounterBar';
 import Ticker from "./components/Ticker";
 import EndpointCount from "./components/EndpointCount";
-import GatewayGlobe from "./components/GatewayGlobe";
 
 export default function Home() {
   return (
@@ -22,7 +21,6 @@ export default function Home() {
       </header>
 
       <CounterBar />
-      <GatewayGlobe />
       <Ticker />
 
       <footer className="max-w-3xl mx-auto mt-8 text-center">
