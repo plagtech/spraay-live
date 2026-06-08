@@ -27,11 +27,13 @@ html, body {
 .rive-hero {
   position: relative;
   width: 100%;
-  height: 280px;
+  height: 360px;
   overflow: hidden;
 }
 
 .rive-hero > div:first-child {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
 }
@@ -39,7 +41,7 @@ html, body {
 .rive-hero canvas {
   width: 100% !important;
   height: 100% !important;
-  object-fit: cover;
+  display: block;
 }
 
 .rive-overlay {
@@ -48,17 +50,20 @@ html, body {
   left: 0;
   right: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  padding: 40px 16px 20px;
+  background: linear-gradient(transparent, rgba(5, 9, 20, 0.9));
+}
+
+.rive-title {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  padding: 24px 16px 16px;
-  background: linear-gradient(transparent, rgba(5, 9, 20, 0.85));
-  flex-wrap: wrap;
 }
 
 .rive-overlay p {
-  width: 100%;
-  text-align: center;
+  margin-top: 4px;
 }
 
 /* ── Animations ──────────────────────────────────────────── */
