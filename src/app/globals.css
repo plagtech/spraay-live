@@ -22,7 +22,46 @@ html, body {
   min-height: 100vh;
 }
 
-/* ── Existing animations ─────────────────────────────────── */
+/* ── Rive hero ───────────────────────────────────────────── */
+
+.rive-hero {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  overflow: hidden;
+}
+
+.rive-hero > div:first-child {
+  width: 100%;
+  height: 100%;
+}
+
+.rive-hero canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+.rive-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 16px 16px;
+  background: linear-gradient(transparent, rgba(5, 9, 20, 0.85));
+  flex-wrap: wrap;
+}
+
+.rive-overlay p {
+  width: 100%;
+  text-align: center;
+}
+
+/* ── Animations ──────────────────────────────────────────── */
 
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(-8px); }
@@ -32,6 +71,16 @@ html, body {
 @keyframes pulseBlue {
   0%, 100% { box-shadow: 0 0 0 0 rgba(59, 158, 255, 0.4); }
   50% { box-shadow: 0 0 0 6px rgba(59, 158, 255, 0); }
+}
+
+@keyframes numFlash {
+  0% { color: var(--spraay-cyan); text-shadow: 0 0 12px rgba(59, 158, 255, 0.5); }
+  100% { text-shadow: none; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .event-row {
@@ -46,66 +95,16 @@ html, body {
   animation: pulseBlue 2s ease-out infinite;
 }
 
-/* ── New: Card shimmer sweep ─────────────────────────────── */
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(200%); }
-  100% { transform: translateX(200%); }
-}
-
-.counter-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.counter-card::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(59, 158, 255, 0.04),
-    transparent
-  );
-  animation: shimmer 5s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.counter-card:nth-child(2)::after { animation-delay: 0.6s; }
-.counter-card:nth-child(3)::after { animation-delay: 1.2s; }
-.counter-card:nth-child(4)::after { animation-delay: 1.8s; }
-
-/* ── New: Number flash on update ─────────────────────────── */
-
-@keyframes numFlash {
-  0% { color: var(--spraay-cyan); text-shadow: 0 0 12px rgba(59, 158, 255, 0.5); }
-  100% { text-shadow: none; }
-}
-
 .num-flash {
-  animation: numFlash 0.6s ease-out;
-}
-
-/* ── New: Fade-in on mount ───────────────────────────────── */
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  animation: numFlash 0.5s ease-out;
 }
 
 .fade-up {
-  animation: fadeUp 0.6s ease-out both;
+  animation: fadeUp 0.5s ease-out both;
 }
 
 .fade-up-1 { animation-delay: 0.1s; }
 .fade-up-2 { animation-delay: 0.2s; }
-.fade-up-3 { animation-delay: 0.3s; }
-.fade-up-4 { animation-delay: 0.4s; }
 
 /* ── Scrollbar ───────────────────────────────────────────── */
 
