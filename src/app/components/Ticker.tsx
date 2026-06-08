@@ -194,6 +194,15 @@ export default function Ticker() {
 
           seenIds.current.add(data.id);
           setEvents((prev) => [data, ...prev].slice(0, MAX_EVENTS));
+
+          // Burst particles on new events
+          const spawnFn = (window as any).__spraaySpawnParticle;
+          if (typeof spawnFn === 'function') {
+            const burstCount = data.event_type === 'payment' ? 5 : 2;
+            for (let i = 0; i < burstCount; i++) {
+              setTimeout(() => spawnFn(), i * 80);
+            }
+          }
         }
       )
       .subscribe((status) => {
@@ -207,7 +216,7 @@ export default function Ticker() {
   }, []);
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className="w-full max-w-3xl mx-auto fade-up fade-up-4">
       <div className="flex items-center justify-between mb-3 px-4">
         <div className="flex items-center gap-2">
           <div

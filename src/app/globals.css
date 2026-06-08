@@ -22,6 +22,8 @@ html, body {
   min-height: 100vh;
 }
 
+/* ── Existing animations ─────────────────────────────────── */
+
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -43,12 +45,75 @@ html, body {
 .live-dot {
   animation: pulseBlue 2s ease-out infinite;
 }
-/* Dark scrollbar for the live ticker */
+
+/* ── New: Card shimmer sweep ─────────────────────────────── */
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(200%); }
+  100% { transform: translateX(200%); }
+}
+
+.counter-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.counter-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(59, 158, 255, 0.04),
+    transparent
+  );
+  animation: shimmer 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.counter-card:nth-child(2)::after { animation-delay: 0.6s; }
+.counter-card:nth-child(3)::after { animation-delay: 1.2s; }
+.counter-card:nth-child(4)::after { animation-delay: 1.8s; }
+
+/* ── New: Number flash on update ─────────────────────────── */
+
+@keyframes numFlash {
+  0% { color: var(--spraay-cyan); text-shadow: 0 0 12px rgba(59, 158, 255, 0.5); }
+  100% { text-shadow: none; }
+}
+
+.num-flash {
+  animation: numFlash 0.6s ease-out;
+}
+
+/* ── New: Fade-in on mount ───────────────────────────────── */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: fadeUp 0.6s ease-out both;
+}
+
+.fade-up-1 { animation-delay: 0.1s; }
+.fade-up-2 { animation-delay: 0.2s; }
+.fade-up-3 { animation-delay: 0.3s; }
+.fade-up-4 { animation-delay: 0.4s; }
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+
 .ticker-scroll {
-  scrollbar-width: thin;                       /* Firefox */
+  scrollbar-width: thin;
   scrollbar-color: var(--border-subtle) transparent;
 }
-.ticker-scroll::-webkit-scrollbar {            /* Chrome / Edge / Safari */
+.ticker-scroll::-webkit-scrollbar {
   width: 8px;
 }
 .ticker-scroll::-webkit-scrollbar-track {
