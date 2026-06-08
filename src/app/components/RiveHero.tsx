@@ -6,7 +6,6 @@ export default function RiveHero() {
   const { RiveComponent } = useRive({
     src: '/nature.riv',
     autoplay: true,
-    stateMachines: 'State Machine 1',
   });
 
   return (
