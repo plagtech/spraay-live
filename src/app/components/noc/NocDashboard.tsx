@@ -22,13 +22,10 @@ const V = {
 };
 const MONO = "var(--font-geist-mono), ui-monospace, Menlo, monospace";
 
-const rand = (a: number, b: number) => a + Math.random() * (b - a);
-
 const TYPE_META: Record<FeedEvent["type"], { label: string; color: string }> = {
   scan: { label: "SCAN", color: V.muted },
-  quote: { label: "402 QUOTE", color: V.cyan },
-  attempt: { label: "PAY ATTEMPT", color: V.amber },
-  settle: { label: "SETTLED", color: V.green },
+  intent: { label: "INTENT", color: V.cyan },
+  payment: { label: "PAYMENT", color: V.green },
 };
 
 // ─── UTC clock ───
@@ -70,13 +67,15 @@ function LiveDot({ color = V.green }: { color?: string }) {
   );
 }
 
-// ─── funnel counters ───
-function NocCounterBar({ counters, series }: { counters: Counters; series: { traffic: number }[] }) {
+// ─── funnel counters with 24h sublines ───
+function NocCounterBar({ counters, today, series }: {
+  counters: Counters; today: Counters; series: { traffic: number }[];
+}) {
   const items = [
-  { key: "scan" as const, label: "Scans", color: V.muted },
-  { key: "quote" as const, label: "Intents", color: V.cyan },
-  { key: "settle" as const, label: "Payments", color: V.green },
-];
+    { key: "scan" as const, label: "Scans", color: V.muted },
+    { key: "intent" as const, label: "Intents", color: V.cyan },
+    { key: "payment" as const, label: "Payments", color: V.green },
+  ];
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
       {items.map((it, i) => (
@@ -92,8 +91,11 @@ function NocCounterBar({ counters, series }: { counters: Counters; series: { tra
           }}>
             {counters[it.key].toLocaleString()}
           </div>
+          <div style={{ fontFamily: MONO, fontSize: 10.5, color: V.dim, marginTop: 2 }}>
+            +{today[it.key].toLocaleString()} <span style={{ letterSpacing: 1 }}>last 24h</span>
+          </div>
           <Sparkline data={series.map((d) => d.traffic * (1 - i * 0.18))} color={it.color} />
-          {i < 3 && (
+          {i < 2 && (
             <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: V.dim, fontSize: 14 }}>›</div>
           )}
         </div>
@@ -281,7 +283,7 @@ function LiveStream({ events }: { events: FeedEvent[] }) {
         const p = (n: number) => String(n).padStart(2, "0");
         return (
           <div key={ev.id}
-            className={ev.type === "settle" ? "event-row noc-glow" : "event-row"}
+            className={ev.type === "payment" ? "event-row noc-glow" : "event-row"}
             style={{
               fontFamily: MONO, fontSize: 10.5, lineHeight: 1.9, whiteSpace: "nowrap",
               overflow: "hidden", textOverflow: "ellipsis",
@@ -297,7 +299,7 @@ function LiveStream({ events }: { events: FeedEvent[] }) {
             {ev.amount && (
               <>
                 {" "}<span style={{ color: V.dim }}>·</span>{" "}
-                <span style={{ color: ev.type === "settle" ? V.green : V.amber }}>{ev.amount} USDC</span>
+                <span style={{ color: ev.type === "payment" ? V.green : V.amber }}>{ev.amount} USDC</span>
               </>
             )}
             {" "}<span style={{ color: V.dim }}>{ev.agent}</span>
@@ -311,8 +313,7 @@ function LiveStream({ events }: { events: FeedEvent[] }) {
 // ─── main export ───
 export default function NocDashboard() {
   const clock = useUTCClock();
-  const { counters, events, series, latency, chainMix, live } = useLiveFeed();
-  const settleRate = ((counters.settle / Math.max(counters.quote, 1)) * 100).toFixed(1);
+  const { counters, today, events, series, latency, chainMix, live } = useLiveFeed();
   const lastLatency = latency[latency.length - 1] ?? 0;
 
   return (
@@ -345,7 +346,7 @@ export default function NocDashboard() {
         </div>
       </div>
 
-      <NocCounterBar counters={counters} series={series} />
+      <NocCounterBar counters={counters} today={today} series={series} />
 
       <div className="noc-grid">
         {/* left */}
@@ -374,10 +375,10 @@ export default function NocDashboard() {
           <Panel title="Funnel Health">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {[
-                { l: "Quote → Settle", v: `${settleRate}%`, c: V.green },
+                { l: "Payments (24h)", v: today.payment.toLocaleString(), c: V.green },
                 { l: "Avg settle", v: `${lastLatency.toFixed(2)}s`, c: V.cyan },
                 { l: "Active chains", v: "15", c: V.blue },
-                { l: "Open attempts", v: String(Math.max(0, counters.attempt - counters.settle)), c: V.red },
+                { l: "Intents (24h)", v: today.intent.toLocaleString(), c: V.amber },
               ].map((m) => (
                 <div key={m.l} style={{ background: V.elevated, border: `1px solid ${V.border}`, borderRadius: 8, padding: "8px 10px" }}>
                   <div style={{ fontFamily: MONO, fontSize: 9, color: V.muted, letterSpacing: 1, textTransform: "uppercase" }}>{m.l}</div>

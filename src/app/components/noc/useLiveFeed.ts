@@ -3,15 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { getSupabase } from "../../../lib/supabaseClient";
 
-// ────────────────────────────────────────────────────────────
-// ADJUST HERE if your gateway_events column names differ.
-// Expected shape (v2 logger):
-//   event_type: 'scan' | 'quote' | 'attempt' | 'settle' (or 'settled')
-//   endpoint / path, chain, amount, payer / agent, created_at
-// ────────────────────────────────────────────────────────────
+// Schema confirmed against production gateway_events:
+//   event_type ∈ { 'scan', 'intent', 'payment' }
+//   columns: endpoint/path, chain, amount, payer/agent, created_at
 const TABLE = "gateway_events";
 
-export type FeedEventType = "scan" | "quote" | "attempt" | "settle";
+export type FeedEventType = "scan" | "intent" | "payment";
 
 export interface FeedEvent {
   id: string;
@@ -25,16 +22,16 @@ export interface FeedEvent {
 
 export interface Counters {
   scan: number;
-  quote: number;
-  attempt: number;
-  settle: number;
+  intent: number;
+  payment: number;
 }
+
+const EMPTY: Counters = { scan: 0, intent: 0, payment: 0 };
 
 const normalizeType = (raw: unknown): FeedEventType => {
   const t = String(raw ?? "").toLowerCase();
-  if (t.startsWith("settl") || t === "payment" || t === "paid") return "settle";
-  if (t === "intent" || t.includes("quote") || t === "402") return "quote";
-  if (t.includes("attempt") || t === "pay") return "attempt";
+  if (t === "payment" || t.startsWith("settl") || t === "paid") return "payment";
+  if (t === "intent" || t.includes("quote") || t === "402") return "intent";
   return "scan";
 };
 
@@ -58,7 +55,7 @@ function mapRow(row: Record<string, unknown>): FeedEvent {
   };
 }
 
-// ─── demo simulation (used when Supabase env vars are absent) ───
+// ─── demo simulation (used only when Supabase env vars are absent) ───
 const DEMO_ENDPOINTS = [
   "/x402/batch/quote", "/x402/inference/chutes", "/x402/research/openalex",
   "/x402/escrow/compute", "/x402/batch/base", "/x402/data/census",
@@ -71,8 +68,7 @@ const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
 function demoEvent(): FeedEvent {
   const r = Math.random();
-  const type: FeedEventType =
-    r < 0.42 ? "scan" : r < 0.72 ? "quote" : r < 0.88 ? "attempt" : "settle";
+  const type: FeedEventType = r < 0.15 ? "scan" : r < 0.97 ? "intent" : "payment";
   return {
     id: Math.random().toString(36).slice(2),
     ts: new Date(),
@@ -80,16 +76,14 @@ function demoEvent(): FeedEvent {
     endpoint: pick(DEMO_ENDPOINTS),
     chain: pick(DEMO_CHAINS),
     agent: pick(DEMO_AGENTS),
-    amount:
-      type === "settle" || type === "attempt"
-        ? rand(0.001, 0.85).toFixed(3)
-        : null,
+    amount: type === "payment" ? rand(0.001, 0.85).toFixed(3) : null,
   };
 }
 
 // ─── the hook ───
 export function useLiveFeed() {
-  const [counters, setCounters] = useState<Counters>({ scan: 0, quote: 0, attempt: 0, settle: 0 });
+  const [counters, setCounters] = useState<Counters>(EMPTY);   // all-time
+  const [today, setToday] = useState<Counters>(EMPTY);          // trailing 24h
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [series, setSeries] = useState(() =>
     Array.from({ length: 48 }, () => ({ traffic: 0, settle: 0 }))
@@ -99,13 +93,13 @@ export function useLiveFeed() {
   const [live, setLive] = useState(false);
   const bucket = useRef({ traffic: 0, settle: 0 });
 
-  // shared ingest path for both realtime and demo events
   const ingest = (ev: FeedEvent) => {
     setCounters((c) => ({ ...c, [ev.type]: c[ev.type] + 1 }));
+    setToday((c) => ({ ...c, [ev.type]: c[ev.type] + 1 }));
     setEvents((e) => [ev, ...e].slice(0, 26));
     setChainCounts((m) => ({ ...m, [ev.chain]: (m[ev.chain] ?? 0) + 1 }));
     bucket.current.traffic += 1;
-    if (ev.type === "settle") bucket.current.settle += 1;
+    if (ev.type === "payment") bucket.current.settle += 1;
   };
 
   useEffect(() => {
@@ -115,21 +109,28 @@ export function useLiveFeed() {
     if (supabase) {
       setLive(true);
 
-      // seed counters with historical totals
       (async () => {
-        const types: FeedEventType[] = ["scan", "quote", "attempt", "settle"];
-        const typeMap: Record<FeedEventType, string> = {
-  scan: "scan", quote: "intent", attempt: "__none__", settle: "payment",
-};
-const seeded: Partial<Counters> = {};
-for (const t of types) {
-  const { count } = await supabase
-    .from(TABLE)
-    .select("*", { count: "exact", head: true })
-    .eq("event_type", typeMap[t]);
-  seeded[t] = count ?? 0;
-}
-        setCounters((c) => ({ ...c, ...seeded } as Counters));
+        const types: FeedEventType[] = ["scan", "intent", "payment"];
+        const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+        const all: Partial<Counters> = {};
+        const day: Partial<Counters> = {};
+        for (const t of types) {
+          const { count: allCount } = await supabase
+            .from(TABLE)
+            .select("*", { count: "exact", head: true })
+            .eq("event_type", t);
+          all[t] = allCount ?? 0;
+
+          const { count: dayCount } = await supabase
+            .from(TABLE)
+            .select("*", { count: "exact", head: true })
+            .eq("event_type", t)
+            .gte("created_at", since24h);
+          day[t] = dayCount ?? 0;
+        }
+        setCounters((c) => ({ ...c, ...all } as Counters));
+        setToday((c) => ({ ...c, ...day } as Counters));
 
         // seed the stream with the most recent rows
         const { data } = await supabase
@@ -159,8 +160,9 @@ for (const t of types) {
 
       cleanup = () => { supabase.removeChannel(channel); };
     } else {
-      // demo mode — no env vars present
-      setCounters({ scan: 14382, quote: 6121, attempt: 1873, settle: 1204 });
+      // demo mode
+      setCounters({ scan: 87952, intent: 453200, payment: 229 });
+      setToday({ scan: 1427, intent: 25112, payment: 7 });
       let alive = true;
       let timeout: ReturnType<typeof setTimeout>;
       const emit = () => {
@@ -172,7 +174,6 @@ for (const t of types) {
       cleanup = () => { alive = false; clearTimeout(timeout); };
     }
 
-    // chart window roller (both modes)
     const chartId = setInterval(() => {
       setSeries((s) => {
         const next = [
@@ -192,7 +193,6 @@ for (const t of types) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // derive chain mix percentages (Base-first ordering)
   const total = Object.values(chainCounts).reduce((a, b) => a + b, 0) || 1;
   const pct = (k: string) => ((chainCounts[k] ?? 0) / total) * 100;
   const base = pct("base"), ethereum = pct("ethereum"), solana = pct("solana");
@@ -203,5 +203,5 @@ for (const t of types) {
     other: Math.max(0, 100 - (base || 46) - (ethereum || 21) - (solana || 18)),
   };
 
-  return { counters, events, series, latency, chainMix, live };
+  return { counters, today, events, series, latency, chainMix, live };
 }
