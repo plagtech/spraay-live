@@ -119,3 +119,77 @@ html, body {
 .ticker-scroll::-webkit-scrollbar-thumb:hover {
   background-color: var(--spraay-blue);
 }
+/* ────────────────────────────────────────────────
+   APPEND to app/globals.css (keep everything you
+   already have — these are additions only)
+   ──────────────────────────────────────────────── */
+
+:root {
+  --noc-panel: #0A101F;
+  --noc-dim: #4A5E80;
+  --noc-amber: #FBBF24;
+  --noc-violet: #A78BFA;
+}
+
+/* radial glow backdrop */
+body {
+  background: radial-gradient(1200px 600px at 50% -10%, #0B1530 0%, var(--bg-primary) 55%);
+}
+
+/* panels */
+.noc-panel {
+  background: var(--noc-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* 3-column grid, collapses on smaller screens */
+.noc-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 12px;
+}
+@media (max-width: 1100px) {
+  .noc-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .noc-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* animations */
+@keyframes nocPing {
+  75%, 100% { transform: scale(2.4); opacity: 0; }
+}
+.noc-ping { animation: nocPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite; }
+
+@keyframes nocTick {
+  from { opacity: 0.3; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+.noc-tick { animation: nocTick 0.25s ease-out; }
+
+@keyframes nocGlow {
+  0% { background: rgba(74, 222, 128, 0.12); }
+  100% { background: transparent; }
+}
+.noc-glow { animation: slideIn 0.3s ease-out, nocGlow 2s ease-out; }
+
+@keyframes nocDash {
+  to { stroke-dashoffset: -96; }
+}
+.noc-dash { animation: nocDash 3s linear infinite; }
+
+/* smooth path morphing on the traffic chart */
+.noc-d { transition: d 1.2s linear; }
+
+@media (prefers-reduced-motion: reduce) {
+  .noc-ping, .noc-tick, .noc-glow, .noc-dash, .event-row, .event-row-payment, .live-dot {
+    animation: none !important;
+  }
+  .noc-d { transition: none !important; }
+}

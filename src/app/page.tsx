@@ -1,39 +1,28 @@
-import RiveHero from './components/RiveHero';
-import CompactStats from './components/CompactStats';
-import EndpointCount from './components/EndpointCount';
-import Ticker from './components/Ticker';
+import NocDashboard from "./components/noc/NocDashboard";
+import EndpointCount from "./components/EndpointCount";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col">
-      {/* Rive landscape hero */}
-      <RiveHero />
+    <main className="min-h-screen py-6 px-4">
+      <div className="max-w-[1240px] mx-auto">
+        <NocDashboard />
 
-      {/* Compact stats bar pinned below hero */}
-      <CompactStats />
+        <div className="mt-4 text-center">
+          <EndpointCount />
+        </div>
 
-      {/* Endpoint count */}
-      <div className="text-center py-3">
-        <EndpointCount />
+        <footer className="mt-8 text-center">
+          <p className="text-xs text-[var(--text-muted)]">
+            powered by{" "}
+            <a
+              href="https://spraay.app"
+              className="text-[var(--spraay-blue)] hover:text-[var(--spraay-cyan)]"
+            >
+              spraay.app
+            </a>
+          </p>
+        </footer>
       </div>
-
-      {/* Live ticker */}
-      <div className="flex-1 px-4 pb-8 fade-up fade-up-1">
-        <Ticker />
-      </div>
-
-      {/* Footer */}
-      <footer className="text-center pb-6">
-        <p className="text-xs text-[var(--text-muted)]">
-          powered by{' '}
-          <a
-            href="https://spraay.app"
-            className="text-[var(--spraay-blue)] hover:text-[var(--spraay-cyan)] transition-colors"
-          >
-            spraay.app
-          </a>
-        </p>
-      </footer>
     </main>
   );
 }
