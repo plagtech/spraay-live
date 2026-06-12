@@ -193,15 +193,15 @@ export function useLiveFeed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const total = Object.values(chainCounts).reduce((a, b) => a + b, 0) || 1;
+  const total = Object.values(chainCounts).reduce((a, b) => a + b, 0);
+let chainMix = { base: 46, ethereum: 21, solana: 18, other: 15 }; // demo-mode only
+if (total > 0) {
   const pct = (k: string) => ((chainCounts[k] ?? 0) / total) * 100;
-  const base = pct("base"), ethereum = pct("ethereum"), solana = pct("solana");
-  const chainMix = {
-    base: base || 46,
-    ethereum: ethereum || 21,
-    solana: solana || 18,
-    other: Math.max(0, 100 - (base || 46) - (ethereum || 21) - (solana || 18)),
-  };
+  const base = Math.round(pct("base"));
+  const ethereum = Math.round(pct("ethereum"));
+  const solana = Math.round(pct("solana"));
+  chainMix = { base, ethereum, solana, other: Math.max(0, 100 - base - ethereum - solana) };
+}
 
   return { counters, today, events, series, latency, chainMix, live };
 }
