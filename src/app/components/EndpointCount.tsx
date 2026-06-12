@@ -1,39 +1,50 @@
-import { getAllGatewayStats } from "@/lib/gatewayStats";
+"use client";
 
-// Server component: runs the gateway fetch on the server (ISR-cached 5 min),
-// so the inventory count is accurate without shipping the logic to the client.
-export default async function EndpointCount() {
-  const { perGateway, combined } = await getAllGatewayStats();
-  const reachable = perGateway.filter((g) => g.ok);
+import { useEffect, useState } from "react";
+
+export default function EndpointCount() {
+  const [main, setMain] = useState<{ paid: number; free: number } | null>(null);
+  const [solana, setSolana] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("https://gateway.spraay.app/")
+      .then((r) => r.json())
+      .then((d) =>
+        setMain({
+          paid: Object.keys(d?.endpoints?.paid ?? {}).length,
+          free: Object.keys(d?.endpoints?.free ?? {}).length,
+        })
+      )
+      .catch(() => {});
+    fetch("https://gateway-solana.spraay.app/")
+      .then((r) => r.json())
+      .then((d) => {
+        const eps = d?.endpoints ?? {};
+        // nested shape (paid/free) or flat map of endpoint names
+        const n =
+          Object.keys(eps.paid ?? {}).length + Object.keys(eps.free ?? {}).length ||
+          Object.keys(eps).length;
+        if (n > 0) setSolana(n);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!main) return null;
+  const total = main.paid + main.free + (solana ?? 0);
 
   return (
-    <div className="inline-flex flex-col items-center gap-1">
-      <div className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)]">
-        <span className="font-semibold text-[var(--text-primary)] tabular-nums">
-          {combined.total.toLocaleString()}
-        </span>
-        <span>endpoints live</span>
-        <span className="text-[var(--border-subtle)]">·</span>
-        <span className="font-semibold text-[var(--spraay-cyan)] tabular-nums">
-          {combined.paid.toLocaleString()}
-        </span>
-        <span>paid</span>
-        <span className="text-[var(--border-subtle)]">·</span>
-        <span className="tabular-nums">{reachable.length}</span>
-        <span>{reachable.length === 1 ? "gateway" : "gateways"}</span>
-      </div>
-      <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)]/70 font-mono">
-        {perGateway.map((g) => (
-          <span key={g.name} className="inline-flex items-center gap-1">
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                g.ok ? "bg-[var(--success)]" : "bg-[var(--intent)]"
-              }`}
-            />
-            {g.name} {g.ok ? g.total : "—"}
-          </span>
-        ))}
-      </div>
-    </div>
+    <p className="text-xs font-mono tracking-wider text-[var(--text-muted)]">
+      <span className="text-[var(--text-primary)]">{total}</span> endpoints live
+      {" · "}
+      <span className="text-[var(--spraay-blue)]">{main.paid}</span> paid
+      {" · "}
+      {solana != null ? (
+        <>2 gateways <span className="text-[var(--noc-dim)]">
+          (main {main.paid + main.free} · solana {solana})
+        </span></>
+      ) : (
+        "1 gateway"
+      )}
+    </p>
   );
 }

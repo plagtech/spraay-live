@@ -41,6 +41,23 @@ function useUTCClock() {
   return `${p(now.getUTCHours())}:${p(now.getUTCMinutes())}:${p(now.getUTCSeconds())} UTC`;
 }
 
+function useGatewayStats() {
+  const [stats, setStats] = useState<{ paid: number; free: number; version: string } | null>(null);
+  useEffect(() => {
+    fetch("https://gateway.spraay.app/")
+      .then((r) => r.json())
+      .then((d) =>
+        setStats({
+          paid: Object.keys(d?.endpoints?.paid ?? {}).length,
+          free: Object.keys(d?.endpoints?.free ?? {}).length,
+          version: d?.version ?? "",
+        })
+      )
+      .catch(() => {}); // keep fallback text on failure
+  }, []);
+  return stats;
+}
+
 // ─── primitives ───
 function Panel({ title, right, children, style }: {
   title: string; right?: React.ReactNode; children: React.ReactNode; style?: React.CSSProperties;
@@ -313,6 +330,7 @@ function LiveStream({ events }: { events: FeedEvent[] }) {
 // ─── main export ───
 export default function NocDashboard() {
   const clock = useUTCClock();
+  const gw = useGatewayStats();
   const { counters, today, events, series, latency, chainMix, live } = useLiveFeed();
   const lastLatency = latency[latency.length - 1] ?? 0;
 
@@ -330,7 +348,7 @@ export default function NocDashboard() {
               Spraay Live <span style={{ color: V.muted, fontWeight: 400 }}>· x402 Gateway Ops</span>
             </div>
             <div style={{ fontFamily: MONO, fontSize: 10, color: V.dim, letterSpacing: 1.5 }}>
-              151 PAID · 6 FREE · 39 CATEGORIES · v3.8.1
+              {gw ? `${gw.paid} PAID · ${gw.free} FREE · v${gw.version}` : "145 PAID · 25 FREE · v3.8.1"}
             </div>
           </div>
         </div>
