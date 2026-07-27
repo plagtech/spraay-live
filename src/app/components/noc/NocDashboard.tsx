@@ -182,6 +182,7 @@ function ChainDonut({ mix }: { mix: { base: number; ethereum: number; solana: nu
     { label: "Solana", value: mix.solana, color: V.cyan },
     { label: "Other", value: mix.other, color: V.deep },
   ];
+  const top = segs.reduce((a, b) => (b.value > a.value ? b : a), segs[0]);
   const r = 52, circ = 2 * Math.PI * r;
   let offset = 0;
   return (
@@ -200,9 +201,9 @@ function ChainDonut({ mix }: { mix: { base: number; ethereum: number; solana: nu
           })}
         </g>
         <text x="70" y="66" textAnchor="middle" fill="#F0F4FA" fontFamily="ui-monospace, Menlo, monospace" fontSize="20" fontWeight="600">
-          {Math.round(mix.base)}%
+          {Math.round(top.value)}%
         </text>
-        <text x="70" y="84" textAnchor="middle" fill="#8BA3C7" fontFamily="ui-monospace, Menlo, monospace" fontSize="9" letterSpacing="1">BASE</text>
+        <text x="70" y="84" textAnchor="middle" fill="#8BA3C7" fontFamily="ui-monospace, Menlo, monospace" fontSize="9" letterSpacing="1">{top.label.toUpperCase()}</text>
       </svg>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {segs.map((s) => (
@@ -384,7 +385,7 @@ export default function NocDashboard() {
 
         {/* center */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
-          <Panel title="Chain Distribution">
+          <Panel title="Payment Chain Mix (24h)">
             <ChainDonut mix={chainMix} />
           </Panel>
           <Panel title="Settlement Latency" right={<span style={{ fontFamily: MONO, fontSize: 9.5, color: V.dim }}>seconds / window</span>}>

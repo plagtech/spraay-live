@@ -40,13 +40,25 @@ const truncAddr = (a: unknown): string => {
   return s.length > 12 ? `${s.slice(0, 6)}…${s.slice(-4)}` : s || "—";
 };
 
+// Normalize chain names so "Solana", "SOL", "solana-mainnet", chain IDs,
+// and CAIP-2 ids all bucket correctly. Null/absent stays visible as
+// "unknown" instead of silently inflating Base.
+const normalizeChain = (raw: unknown): string => {
+  const c = String(raw ?? "").trim().toLowerCase();
+  if (!c) return "unknown";
+  if (c.startsWith("sol")) return "solana";
+  if (c === "eth" || c.startsWith("ethereum") || c === "1" || c === "eip155:1") return "ethereum";
+  if (c.startsWith("base") || c === "8453" || c === "eip155:8453") return "base";
+  return c;
+};
+
 function mapRow(row: Record<string, unknown>): FeedEvent {
   return {
     id: String(row.id ?? Math.random().toString(36).slice(2)),
     ts: row.created_at ? new Date(String(row.created_at)) : new Date(),
     type: normalizeType(row.event_type ?? row.type ?? row.event),
     endpoint: String(row.endpoint ?? row.path ?? row.resource ?? "/x402/—"),
-    chain: String(row.chain ?? "base"),
+    chain: normalizeChain(row.chain),
     agent: truncAddr(row.payer ?? row.agent ?? row.from_address ?? row.wallet),
     amount:
       row.amount != null && row.amount !== ""
@@ -97,7 +109,9 @@ export function useLiveFeed() {
     setCounters((c) => ({ ...c, [ev.type]: c[ev.type] + 1 }));
     setToday((c) => ({ ...c, [ev.type]: c[ev.type] + 1 }));
     setEvents((e) => [ev, ...e].slice(0, 26));
-    setChainCounts((m) => ({ ...m, [ev.chain]: (m[ev.chain] ?? 0) + 1 }));
+    if (ev.type === "payment") {
+      setChainCounts((m) => ({ ...m, [ev.chain]: (m[ev.chain] ?? 0) + 1 }));
+    }
     bucket.current.traffic += 1;
     if (ev.type === "payment") bucket.current.settle += 1;
   };
@@ -140,9 +154,21 @@ export function useLiveFeed() {
           .limit(20);
         if (data) {
           setEvents(data.map(mapRow));
+        }
+
+        // Chain mix: settled payments from the trailing 24h — NOT the
+        // last few events of any type. Scans/intents outnumber payments
+        // ~1000:1 and were drowning out the real settlement mix.
+        const { data: payRows } = await supabase
+          .from(TABLE)
+          .select("chain")
+          .eq("event_type", "payment")
+          .gte("created_at", since24h)
+          .limit(10000);
+        if (payRows) {
           const chains: Record<string, number> = {};
-          for (const r of data) {
-            const c = String((r as Record<string, unknown>).chain ?? "base");
+          for (const r of payRows) {
+            const c = normalizeChain((r as Record<string, unknown>).chain);
             chains[c] = (chains[c] ?? 0) + 1;
           }
           setChainCounts(chains);
