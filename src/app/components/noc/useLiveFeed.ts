@@ -60,6 +60,26 @@ const normalizeChain = (raw: unknown): string => {
   return c;
 };
 
+// Whole-percent shares that always total exactly 100 (largest-remainder
+// rounding): every bucket is rounded down, then the leftover points go to the
+// buckets with the biggest fractional parts. Rounding each bucket on its own
+// could add up to 101 or 102.
+const NAMED_CHAINS = ["base", "ethereum", "solana", "robinhood", "peaq"] as const;
+
+export function toChainMix(counts: Record<string, number>, total: number): ChainMix {
+  const named = NAMED_CHAINS.map((k) => ((counts[k] ?? 0) / total) * 100);
+  const raw = [...named, Math.max(0, 100 - named.reduce((a, b) => a + b, 0))];
+  const out = raw.map(Math.floor);
+  const leftover = 100 - out.reduce((a, b) => a + b, 0);
+  raw
+    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+    .sort((a, b) => b.frac - a.frac || a.i - b.i)
+    .slice(0, leftover)
+    .forEach(({ i }) => { out[i] += 1; });
+  const [base, ethereum, solana, robinhood, peaq, other] = out;
+  return { base, ethereum, solana, robinhood, peaq, other };
+}
+
 function mapRow(row: Record<string, unknown>): FeedEvent {
   return {
     id: String(row.id ?? Math.random().toString(36).slice(2)),
@@ -229,18 +249,7 @@ export function useLiveFeed() {
 
   const total = Object.values(chainCounts).reduce((a, b) => a + b, 0);
 let chainMix: ChainMix = { base: 44, ethereum: 18, solana: 18, robinhood: 8, peaq: 4, other: 8 }; // demo-mode only
-if (total > 0) {
-  const pct = (k: string) => Math.round(((chainCounts[k] ?? 0) / total) * 100);
-  const base = pct("base");
-  const ethereum = pct("ethereum");
-  const solana = pct("solana");
-  const robinhood = pct("robinhood");
-  const peaq = pct("peaq");
-  chainMix = {
-    base, ethereum, solana, robinhood, peaq,
-    other: Math.max(0, 100 - base - ethereum - solana - robinhood - peaq),
-  };
-}
+if (total > 0) chainMix = toChainMix(chainCounts, total);
 
   return { counters, today, events, series, latency, chainMix, live };
 }

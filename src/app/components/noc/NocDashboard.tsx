@@ -20,6 +20,7 @@ const V = {
   red: "var(--intent)",
   amber: "var(--noc-amber)",
   violet: "var(--noc-violet)",
+  magenta: "var(--noc-magenta)",
 };
 const MONO = "var(--font-geist-mono), ui-monospace, Menlo, monospace";
 
@@ -178,7 +179,7 @@ function ChainDonut({ mix }: { mix: ChainMix }) {
   const segs = [
     { label: "Base", value: mix.base, color: V.blue },
     { label: "Ethereum", value: mix.ethereum, color: V.violet },
-    { label: "Solana", value: mix.solana, color: V.cyan },
+    { label: "Solana", value: mix.solana, color: V.magenta },
     { label: "Robinhood", value: mix.robinhood, color: V.green },
     { label: "peaq", value: mix.peaq, color: V.amber },
     { label: "Other", value: mix.other, color: V.deep },
