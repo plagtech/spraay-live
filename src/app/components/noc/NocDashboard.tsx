@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLiveFeed, type FeedEvent, type Counters } from "./useLiveFeed";
+import { useLiveFeed, type FeedEvent, type Counters, type ChainMix } from "./useLiveFeed";
+import { countMainGateway } from "../../../lib/endpointCounts";
 
 // CSS-variable palette — single source of truth stays in globals.css
 const V = {
@@ -21,6 +22,10 @@ const V = {
   violet: "var(--noc-violet)",
 };
 const MONO = "var(--font-geist-mono), ui-monospace, Menlo, monospace";
+
+// Chains Spraay supports — matches the gateway README ("190 … endpoints across
+// 17 chains"). 15 before Robinhood Chain and peaq were added.
+const ACTIVE_CHAINS = 17;
 
 const TYPE_META: Record<FeedEvent["type"], { label: string; color: string }> = {
   scan: { label: "SCAN", color: V.muted },
@@ -46,13 +51,7 @@ function useGatewayStats() {
   useEffect(() => {
     fetch("https://gateway.spraay.app/")
       .then((r) => r.json())
-      .then((d) =>
-        setStats({
-          paid: Object.keys(d?.endpoints?.paid ?? {}).length,
-          free: Object.keys(d?.endpoints?.free ?? {}).length,
-          version: d?.version ?? "",
-        })
-      )
+      .then((d) => setStats({ ...countMainGateway(d), version: d?.version ?? "" }))
       .catch(() => {}); // keep fallback text on failure
   }, []);
   return stats;
@@ -175,11 +174,13 @@ function TrafficChart({ series }: { series: { traffic: number; settle: number }[
 }
 
 // ─── chain distribution donut ───
-function ChainDonut({ mix }: { mix: { base: number; ethereum: number; solana: number; other: number } }) {
+function ChainDonut({ mix }: { mix: ChainMix }) {
   const segs = [
     { label: "Base", value: mix.base, color: V.blue },
     { label: "Ethereum", value: mix.ethereum, color: V.violet },
     { label: "Solana", value: mix.solana, color: V.cyan },
+    { label: "Robinhood", value: mix.robinhood, color: V.green },
+    { label: "peaq", value: mix.peaq, color: V.amber },
     { label: "Other", value: mix.other, color: V.deep },
   ];
   const top = segs.reduce((a, b) => (b.value > a.value ? b : a), segs[0]);
@@ -349,7 +350,7 @@ export default function NocDashboard() {
               Spraay Live <span style={{ color: V.muted, fontWeight: 400 }}>· x402 Gateway Ops</span>
             </div>
             <div style={{ fontFamily: MONO, fontSize: 10, color: V.dim, letterSpacing: 1.5 }}>
-              {gw ? `${gw.paid} PAID · ${gw.free} FREE · v${gw.version}` : "145 PAID · 25 FREE · v3.8.1"}
+              {gw ? `${gw.paid} PAID · ${gw.free} FREE · v${gw.version}` : "158 PAID · 32 FREE · v3.8.3"}
             </div>
           </div>
         </div>
@@ -396,7 +397,7 @@ export default function NocDashboard() {
               {[
                 { l: "Payments (24h)", v: today.payment.toLocaleString(), c: V.green },
                 { l: "Avg settle", v: `${lastLatency.toFixed(2)}s`, c: V.cyan },
-                { l: "Active chains", v: "15", c: V.blue },
+                { l: "Active chains", v: String(ACTIVE_CHAINS), c: V.blue },
                 { l: "Intents (24h)", v: today.intent.toLocaleString(), c: V.amber },
               ].map((m) => (
                 <div key={m.l} style={{ background: V.elevated, border: `1px solid ${V.border}`, borderRadius: 8, padding: "8px 10px" }}>

@@ -10,6 +10,12 @@ const TABLE = "gateway_events";
 
 export type FeedEventType = "scan" | "intent" | "payment";
 
+// Share of settled payments per chain over the trailing 24h, in whole percent.
+export type ChainMix = {
+  base: number; ethereum: number; solana: number;
+  robinhood: number; peaq: number; other: number;
+};
+
 export interface FeedEvent {
   id: string;
   ts: Date;
@@ -49,6 +55,8 @@ const normalizeChain = (raw: unknown): string => {
   if (c.startsWith("sol")) return "solana";
   if (c === "eth" || c.startsWith("ethereum") || c === "1" || c === "eip155:1") return "ethereum";
   if (c.startsWith("base") || c === "8453" || c === "eip155:8453") return "base";
+  if (c.startsWith("robinhood") || c === "4663" || c === "eip155:4663") return "robinhood";
+  if (c.startsWith("peaq") || c === "3338" || c === "eip155:3338") return "peaq";
   return c;
 };
 
@@ -220,13 +228,18 @@ export function useLiveFeed() {
   }, []);
 
   const total = Object.values(chainCounts).reduce((a, b) => a + b, 0);
-let chainMix = { base: 46, ethereum: 21, solana: 18, other: 15 }; // demo-mode only
+let chainMix: ChainMix = { base: 44, ethereum: 18, solana: 18, robinhood: 8, peaq: 4, other: 8 }; // demo-mode only
 if (total > 0) {
-  const pct = (k: string) => ((chainCounts[k] ?? 0) / total) * 100;
-  const base = Math.round(pct("base"));
-  const ethereum = Math.round(pct("ethereum"));
-  const solana = Math.round(pct("solana"));
-  chainMix = { base, ethereum, solana, other: Math.max(0, 100 - base - ethereum - solana) };
+  const pct = (k: string) => Math.round(((chainCounts[k] ?? 0) / total) * 100);
+  const base = pct("base");
+  const ethereum = pct("ethereum");
+  const solana = pct("solana");
+  const robinhood = pct("robinhood");
+  const peaq = pct("peaq");
+  chainMix = {
+    base, ethereum, solana, robinhood, peaq,
+    other: Math.max(0, 100 - base - ethereum - solana - robinhood - peaq),
+  };
 }
 
   return { counters, today, events, series, latency, chainMix, live };

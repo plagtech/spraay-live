@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { countMainGateway } from "../../lib/endpointCounts";
 
 export default function EndpointCount() {
   const [main, setMain] = useState<{ paid: number; free: number } | null>(null);
@@ -9,12 +10,7 @@ export default function EndpointCount() {
   useEffect(() => {
     fetch("https://gateway.spraay.app/")
       .then((r) => r.json())
-      .then((d) =>
-        setMain({
-          paid: Object.keys(d?.endpoints?.paid ?? {}).length,
-          free: Object.keys(d?.endpoints?.free ?? {}).length,
-        })
-      )
+      .then((d) => setMain(countMainGateway(d)))
       .catch(() => {});
     fetch("https://gateway-solana.spraay.app/")
       .then((r) => r.json())
